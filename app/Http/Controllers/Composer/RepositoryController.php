@@ -16,7 +16,9 @@ use App\Models\Package;
 use App\Models\Version;
 use App\Normalizer;
 use Illuminate\Contracts\Database\Eloquent\Builder as BuilderContract;
+use Illuminate\Contracts\Filesystem\Cloud;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -152,7 +154,7 @@ class RepositoryController extends RepositoryAwareController
     /**
      * @throws Throwable
      */
-    public function download(Request $request): StreamedResponse
+    public function download(Request $request): StreamedResponse|RedirectResponse
     {
         $this->authorize(TokenAbility::REPOSITORY_READ);
 
@@ -191,6 +193,14 @@ class RepositoryController extends RepositoryAwareController
             ip: $request->ip(),
             token: $this->token()?->currentAccessToken()
         ));
+
+        $disk = Storage::disk();
+
+        if ($disk instanceof Cloud) {
+            return redirect()->away(
+                $disk->temporaryUrl($version->archive_path, now()->addMinutes(5))
+            );
+        }
 
         return Storage::download($version->archive_path);
     }
