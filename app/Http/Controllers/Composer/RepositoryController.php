@@ -16,13 +16,13 @@ use App\Models\Package;
 use App\Models\Version;
 use App\Normalizer;
 use Illuminate\Contracts\Database\Eloquent\Builder as BuilderContract;
-use Illuminate\Contracts\Filesystem\Cloud;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\UrlGeneration\TemporaryUrlGenerator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
@@ -196,7 +196,7 @@ class RepositoryController extends RepositoryAwareController
 
         $disk = Storage::disk();
 
-        if ($disk instanceof Cloud) {
+        if ($disk->getAdapter() instanceof TemporaryUrlGenerator) {
             return redirect()->away(
                 $disk->temporaryUrl($version->archive_path, now()->addMinutes(5))
             );
