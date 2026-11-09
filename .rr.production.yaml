@@ -34,6 +34,6 @@ rpc:
 
 logs:
   mode: production
-  level: debug
+  level: ${RR_LOG_LEVEL:-debug}
   output: stdout
   encoding: json
