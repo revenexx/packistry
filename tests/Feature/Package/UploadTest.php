@@ -227,3 +227,41 @@ it('rejects zip when archive has multiple top-level directories without root com
             'file' => ['composer.json not found in archive'],
         ]));
 });
+
+it('keeps all composer link keys in version metadata', function () use ($zipContent): void {
+    user([Permission::UNSCOPED, Permission::PACKAGE_CREATE]);
+
+    $repository = Repository::factory()->state([
+        'name' => 'test/test',
+    ])->create();
+
+    $links = [
+        'require' => ['php' => '^8.4'],
+        'require-dev' => ['pestphp/pest' => '^3.0'],
+        'conflict' => ['laravel/scout' => '>=10.24'],
+        'provide' => ['psr/log-implementation' => '1.0'],
+        'replace' => ['test/legacy' => '*'],
+        'suggest' => ['ext-redis' => 'for caching'],
+    ];
+
+    $composerJson = json_encode([
+        'name' => 'test/test',
+        'version' => '1.0.0',
+        ...$links,
+    ], JSON_THROW_ON_ERROR);
+
+    $file = UploadedFile::fake()->createWithContent(
+        name: 'project.zip',
+        content: $zipContent(['composer.json' => $composerJson]),
+    );
+
+    post("/api/repositories/$repository->id/uploads", ['file' => $file], ['Accept' => 'application/json'])
+        ->assertStatus(201);
+
+    /** @var Version $version */
+    $version = Version::query()->firstOrFail();
+
+    foreach ($links as $key => $value) {
+        expect($version->metadata[$key] ?? null)->toBe($value);
+    }
+});
